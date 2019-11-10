@@ -1,14 +1,66 @@
 //import
 import 'package:flutter/material.dart';
 
-import './screens/categories_screen.dart';
+import './data/dummy_data.dart';
+import './models/meal.dart';
+import './screens/filters_screen.dart';
+import './screens/taps_screen.dart';
 import './screens/category_meals_screen.dart';
 import './screens/meals_detail_screen.dart';
 
 void main() => runApp(MyApp());
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   // This widget is the root of your application.
+  @override
+  _MyAppState createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  Map<String, bool> _filters = {
+    'gluten': false,
+    'lactose': false,
+    'vegetarian': false,
+    'vegen': false,
+  };
+
+  List<Meal> _ourMeals = DUMMY_MEALS;
+  List<Meal> _favoriteMeals = [];
+
+  void _onSave(Map<String, bool> filterData) {
+    setState(() {
+      _filters = filterData;
+
+      _ourMeals = DUMMY_MEALS.where((meal) {
+        if (_filters['gluten'] && !meal.isGlutenFree) return false;
+        if (_filters['lactose'] && !meal.isLactoseFree) return false;
+        if (_filters['vegetarian'] && !meal.isVegetarian) return false;
+        if (_filters['vegen'] && !meal.isVegan) return false;
+        return true;
+      }).toList();
+    });
+  }
+
+  void _toggleFavorite(String mealId) {
+    final existingIndex =
+        _favoriteMeals.indexWhere((meal) => meal.id == mealId);
+    if (existingIndex >= 0) {
+      setState(() {
+        _favoriteMeals.removeAt(existingIndex);
+      });
+    } else {
+      setState(() {
+        _favoriteMeals.add(
+          DUMMY_MEALS.firstWhere((meal) => meal.id == mealId),
+        );
+      });
+    }
+  }
+
+  bool _isMealFavorite(String id) {
+    return _favoriteMeals.any((meal) => meal.id == id);
+  }
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -32,10 +84,13 @@ class MyApp extends StatelessWidget {
               ),
             ),
       ),
-      home: CategoriesScreen(),
+      initialRoute: '/',
       routes: {
-        CategoryMealsScreen.routeName: (ctx) => CategoryMealsScreen(),
-        MealsDetailScreen.routeName: (ctx) => MealsDetailScreen(),
+        '/': (ctx) => TapsScreen(_favoriteMeals),
+        CategoryMealsScreen.routeName: (ctx) => CategoryMealsScreen(_ourMeals),
+        MealsDetailScreen.routeName: (ctx) =>
+            MealsDetailScreen(_toggleFavorite, _isMealFavorite),
+        FiltersScreen.routeName: (ctx) => FiltersScreen(_filters, _onSave),
       },
     );
   }
